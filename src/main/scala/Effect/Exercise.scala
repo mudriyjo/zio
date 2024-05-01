@@ -1,6 +1,7 @@
+import java.time.LocalDateTime
 object Exercise {
   
-    class MyIO[A](val performUnsafe: () => A) {
+    case class MyIO[A](performUnsafe: () => A) {
         def map[B](f: A => B): MyIO[B] =
             MyIO[B](() => f(performUnsafe()))
         
@@ -12,6 +13,25 @@ object Exercise {
         println("perform computation....")
         42
     })
+    //1
+    def getTime: MyIO[Long] = MyIO(() => { System.nanoTime() })
+    //2
+    def measure[A](computation: MyIO[A]): MyIO[(Long, A)] = for {
+        start <- getTime
+        value <- computation
+        end <- getTime
+    } yield (end - start, value)
+    
+    //3
+    def readFromConsole: MyIO[String] =
+        MyIO(() => {
+            scala.io.StdIn.readLine()
+        })
+    //4
+    def writeToConsole(text: String): MyIO[Unit] =
+        MyIO(() => {
+            println(text)
+        })
     /* 
     Exercise create some IO which
     1. measure the current time
@@ -23,8 +43,16 @@ object Exercise {
         then print a welcome message
      */
 
+    def program = for {
+        _ <- writeToConsole("what's is your name?")
+        name <- readFromConsole
+        _ <- writeToConsole(s"Hello, ${name}")
+    } yield ()
+
     @main def main(): Unit = {
-        val res = computation.performUnsafe()
-        println(s"computation is: $res")
+        val longComputation = MyIO(() => {Thread.sleep(1000); 42})
+        // val res = computation.performUnsafe()
+        println(s"computation is: ${measure(longComputation).performUnsafe()}")
+        program.performUnsafe()
     }
 }
