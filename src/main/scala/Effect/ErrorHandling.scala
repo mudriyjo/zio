@@ -1,8 +1,9 @@
 package Effect
 
 import zio._
-import msg
 import scala.util.Try
+import scala.util.Failure
+import scala.util.Success
 
 object ErrorHandling extends ZIOAppDefault {
 
@@ -67,5 +68,27 @@ object ErrorHandling extends ZIOAppDefault {
     Exercise: implement a version of fromTry, fromOption, fromEither, either, absolve
     using fold and foldZIO
      */
-    override def run = ???
+
+    def fromTry[A](el: Try[A]): ZIO[Any, Throwable, A] = el match
+        case Failure(exception) => ZIO.fail(exception)
+        case Success(value) =>ZIO.succeed(value)
+
+    def fromOption[A](el: Option[A]): ZIO[Any, Option[Nothing], A] = el match
+        case None => ZIO.fail(None)
+        case Some(value) => ZIO.succeed(value)
+    
+    def fromEither[A,E](el: Either[E, A]): ZIO[Any, E, A] = el match
+        case Left(value) => ZIO.fail(value)
+        case Right(value) => ZIO.succeed(value)
+    
+    def either[R, E,A](el: ZIO[R, E, A]): ZIO[R, Nothing, Either[E,A]] = 
+        el.fold(e => Left(e), value => Right(value))
+    
+    def absolve[R,E,A](el: ZIO[R, Nothing, Either[E,A]]): ZIO[R, E, A] = 
+        el.flatMap(value => value match {
+            case Left(value) => ZIO.fail(value)
+            case Right(value) => ZIO.succeed(value)
+        })
+
+    override def run = ZIO.none
 }
