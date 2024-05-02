@@ -183,7 +183,10 @@ object ErrorHandling extends ZIOAppDefault {
 
     // 2. Transform a zio into another type of zio with a narrower exception type
     def ioException[R,A](zio: ZIO[R, Throwable, A]): ZIO[R, IOException, A] = 
-        zio.mapError(th => new IOException(th.getMessage()))
+        zio.refineOrDie{
+            case e: IOException => e
+        }
+        // zio.mapError(th => new IOException(th.getMessage()))
 
     // 3.
     def left[R, E, A, B](zio: ZIO[R,E,Either[A,B]]): ZIO[R,Either[E,A], B] =
@@ -193,7 +196,7 @@ object ErrorHandling extends ZIOAppDefault {
                 case Left(value) => ZIO.fail(Right(value))
                 case Right(value) => ZIO.succeed(value)
         )
-
+    
     // 4. 
     val database = Map(
         "daniel" -> 123,
@@ -224,6 +227,9 @@ object ErrorHandling extends ZIOAppDefault {
             database.get(userId).map(phone => UserProfile(userId, phone)) match
                 case Some(value) => ZIO.succeed(value)
                 case None => ZIO.fail(UserNotExistError(s"user with user ID: ${userId} is not exist"))
-                
+    
+    def betterLookupProfile_v2(userId: String): ZIO[Any, Option[QueryError], UserProfile] =
+        lookupProfile(userId).some
+        
     override def run = ZIO.none
 }
