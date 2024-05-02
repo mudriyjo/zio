@@ -175,6 +175,11 @@ object ErrorHandling extends ZIOAppDefault {
             },
             value => ZIO.succeed(value)
         )
+    
+    val aBetterFailure = ZIO.succeed[Int](throw new RuntimeException("this is bad!")).sandbox
+    val aBetterFailure_v2 = ZIO.succeed[Int](throw new RuntimeException("this is bad!")).unrefine{
+        case e => e 
+    }
 
     // 2. Transform a zio into another type of zio with a narrower exception type
     def ioException[R,A](zio: ZIO[R, Throwable, A]): ZIO[R, IOException, A] = 
