@@ -4,6 +4,7 @@ import zio._
 import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
+import java.io.IOException
 
 object ErrorHandling extends ZIOAppDefault {
 
@@ -90,5 +91,79 @@ object ErrorHandling extends ZIOAppDefault {
             case Right(value) => ZIO.succeed(value)
         })
 
+    
+    /* 
+        Errors = failures present in the ZIO type signature ("checked" errors)
+        Defects = failures that are unrecoverable, unforseen, NOT present in the ZIO type signature
+
+        ZIO[R, E, A] can finish with Exit[E, A]
+        - Success[A] containing a value
+        - Cause[E]
+            - Fail[E] containing error
+            - Die(t: Throwable) which was unforseen
+    */
+
+    val divisedByZero: UIO[Int] = ZIO.succeed(1 / 0)
+    val failedCausedExpected: ZIO[Any, String, Int] = ZIO.fail("Something happend....")
+    val failedCauseExposed: ZIO[Any, Cause[String], Int] = failedCausedExpected.sandbox
+    val failedCauseHidden: ZIO[Any, String, Int] = failedCauseExposed.unsandbox
+
+    // fold with cause
+    val foldWithCause = failedCausedExpected.foldCause(
+        cause => s"error happend, ${cause.defects}",
+        res => res
+    )
+
+    val foldWithCauseZIO = failedCausedExpected.foldCauseZIO(
+        cause => ZIO.succeed("error happend, ${cause.defects}"),
+        res => ZIO.succeed(res)
+    )
+
+    /* 
+    Good practices
+    1. At a low level, your errors should be treated
+    2. At a high level, you should hide errors and assume they are unrecoverable
+     */
+
+    def callHttpEndpoint(url: String): ZIO[Any, IOException, String] =
+        ZIO.fail(new IOException("Can't reach host"))
+
+    val endpointCallWithDefect = callHttpEndpoint("http://g.com").orDie
+
+    // refining the error channel
+    def callHttpEndpointWideError(url: String): ZIO[Any, Exception, String] =
+        ZIO.fail(new IOException("Can't reach host"))
+    
+    def callHttpEndpoint_v2(url: String): ZIO[Any, IOException, String] =
+        callHttpEndpointWideError(url).refineOrDie{
+            case e: IOException => e
+            case e: Exception => new IOException(e.getMessage())
+        }
+    
+    // reverse make error wider
+    val unrefineCallHttp: ZIO[Any, Exception, String] = 
+        callHttpEndpoint_v2("http://g.com").unrefine{
+            case e => new Exception(e.getMessage())
+        }
+    
+    // combine different type of errors
+    // trait AppError
+    case class IndexError(msg: String) // extends AppError
+    case class DBError(msg: String) // extends AppError
+    val callApi: ZIO[Any, IndexError, String] = ZIO.succeed("<html></html>")
+    val makeQuery: ZIO[Any, DBError, Int] = ZIO.succeed(1)
+    val combined = for {
+        page <- callApi
+        rowsAffected <- makeQuery
+    } yield (page, rowsAffected)
+
+    /* 
+    Solution
+    1. Design error model
+    2. Using union type in Scala 3
+    3. .mapError to some common error type
+     */
+
+              
     override def run = ZIO.none
 }
