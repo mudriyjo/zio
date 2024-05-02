@@ -164,6 +164,61 @@ object ErrorHandling extends ZIOAppDefault {
     3. .mapError to some common error type
      */
 
-              
+    /* 
+    Exercise
+     */
+
+    // 1. Make this effect FALL with a TYPED error
+    val aBadFailure = ZIO.succeed[Int](throw new RuntimeException("this is bad!"))
+        .foldCauseZIO(cause => cause match {
+            case e => ZIO.fail(new IOException("Lift error"))
+            },
+            value => ZIO.succeed(value)
+        )
+
+    // 2. Transform a zio into another type of zio with a narrower exception type
+    def ioException[R,A](zio: ZIO[R, Throwable, A]): ZIO[R, IOException, A] = 
+        zio.mapError(th => new IOException(th.getMessage()))
+
+    // 3.
+    def left[R, E, A, B](zio: ZIO[R,E,Either[A,B]]): ZIO[R,Either[E,A], B] =
+        zio.foldZIO(
+            e => ZIO.fail(Left(e)),
+            res => res match
+                case Left(value) => ZIO.fail(Right(value))
+                case Right(value) => ZIO.succeed(value)
+        )
+
+    // 4. 
+    val database = Map(
+        "daniel" -> 123,
+        "alice" -> 789
+    )
+    
+    trait AppError
+    case class QueryError(msg: String) extends AppError
+    case class UserNotExistError(msg: String) extends AppError
+    case class UserIdParameterError(msg: String) extends AppError
+    case class DatabaseUnreachableError(msg: String) extends AppError
+
+    case class UserProfile(name: String, phone: Int)
+
+    def lookupProfile(userId: String): ZIO[Any, QueryError, Option[UserProfile]] =
+        if(userId.toLowerCase() != userId) then
+            ZIO.fail(QueryError("user ID format is invalid"))
+        else 
+            ZIO.succeed(database.get(userId).map(phone => UserProfile(userId, phone)))
+    
+    // surface out all the failed cases of this API
+    def betterLookupProfile(userId: String): ZIO[Any, AppError, UserProfile] =
+        if(userId == null) then ZIO.fail(UserIdParameterError("user ID parameter is empty"))
+        if(database == null) then ZIO.fail(DatabaseUnreachableError("Can't connect to DB"))
+        if(userId.toLowerCase() != userId) then
+            ZIO.fail(QueryError("user ID format is invalid"))
+        else 
+            database.get(userId).map(phone => UserProfile(userId, phone)) match
+                case Some(value) => ZIO.succeed(value)
+                case None => ZIO.fail(UserNotExistError(s"user with user ID: ${userId} is not exist"))
+                
     override def run = ZIO.none
 }
