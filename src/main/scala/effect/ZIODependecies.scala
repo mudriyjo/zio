@@ -31,5 +31,15 @@ object ZIODependecies extends ZIOAppDefault {
        _ <- subscribeService.subscribe(User("John", "john@gmail.com"))
     } yield()
     
-    def run = program.provide(subscriptionServices)
+    
+
+    def run = program.provide(
+        // subscriptionServices
+        UserSubscriptionServices.live,
+        UserEmail.live,
+        UserDatabase.live,
+        ConnectionPool.live(10),
+        // ZLayer.Debug.tree
+        // ZLayer.Debug.mermaid
+    )
 }
