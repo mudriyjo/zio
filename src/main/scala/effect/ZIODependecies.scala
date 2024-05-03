@@ -1,10 +1,9 @@
-package Effect
+package effect
 
 import zio._
-import Effect.Services.UserSubscriptionServices
-import Effect.Services.UserEmail
+import effect.services.{UserDatabase, UserEmail, UserSubscriptionServices}
 
-object ZIODependecies extends ZIOAppDefault{
+object ZIODependecies extends ZIOAppDefault {
   
     /* 
     + 1. Implement User case class
@@ -19,9 +18,10 @@ object ZIODependecies extends ZIOAppDefault{
     8. Show Standart ZLayer services, such as: Clock, Random, System, Console
      */
 
-    import effect.services._
-    val subscriptionServices = 
-        UserDatabase.live ++ UserEmail.live
+   
 
-    def run= ???
+    val subscriptionServices: ZLayer[Nothing, Nothing, UserSubscriptionServices] = 
+        (UserDatabase.live ++ UserEmail.live) >>> UserSubscriptionServices.live
+
+    def run = ZIO.none
 }

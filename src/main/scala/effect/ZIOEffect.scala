@@ -1,4 +1,4 @@
-package Effect
+package effect
 
 import zio._
 import zio.Cause.Empty
