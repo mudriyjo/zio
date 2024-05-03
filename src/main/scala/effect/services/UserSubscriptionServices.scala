@@ -2,6 +2,8 @@ package effect.services
 
 import effect.services.entity.User
 import zio._
+import effect.services.entity.User
+import effect.services.{UserSubscriptionServices, UserEmail, UserDatabase}
 
 class UserSubscriptionServices(database: UserDatabase, email: UserEmail) {
     
