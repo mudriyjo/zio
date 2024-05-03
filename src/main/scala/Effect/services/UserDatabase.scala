@@ -1,4 +1,4 @@
-package Effect.Services
+package effect.Services
 
 import effect.services.entity.User
 import zio._
@@ -9,4 +9,11 @@ class UserDatabase(connectionPool: ConnectionPool) {
         // Just example, use prepared query
         _ <- con.makeQuery(s"INSERT INTO user (name, email) VALUES (${user.name}, ${user.email})")
     } yield ()
+}
+
+object UserDatabase {
+    def create(connectionPool: ConnectionPool): UserDatabase =
+        new UserDatabase(connectionPool)
+    
+    val live: ZLayer[ConnectionPool, Nothing, UserDatabase] = ZLayer.fromFunction(create)
 }
