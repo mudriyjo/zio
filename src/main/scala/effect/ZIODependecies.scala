@@ -15,10 +15,10 @@ object ZIODependecies extends ZIOAppDefault {
     + 3. Implement companion object factories
     + 4. Implement live functionality for each object
         + Show 2 type of composition in live horizontal/vertical
-    + 5. Prepare programm
+    + 5. Prepare program
     + 6. Provide dependencies
-    + 7. Show ZLayer.Debug funcationality for dependency graph
-    8. Show Standart ZLayer services, such as: Clock, Random, System, Console
+    + 7. Show ZLayer.Debug functionality for dependency graph
+    + 8. Show Standard ZLayer services, such as: Clock, Random, System, Console
      */
 
     val subscriptionServices: ZLayer[Any, Nothing, UserSubscriptionServices] = 
