@@ -230,6 +230,15 @@ object ErrorHandling extends ZIOAppDefault {
     
     def betterLookupProfile_v2(userId: String): ZIO[Any, Option[QueryError], UserProfile] =
         lookupProfile(userId).some
-        
+
+    def triangular(n: Long): Long = 
+        var next = 0 
+        var sum = 0
+        while(n>0) {
+            next += next+1
+            sum += next
+        }
+        sum
+
     override def run = ZIO.none
 }
