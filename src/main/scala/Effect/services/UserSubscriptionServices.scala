@@ -1,4 +1,4 @@
-package effect.Services
+package effect.services
 
 import effect.services.entity.User
 import zio._

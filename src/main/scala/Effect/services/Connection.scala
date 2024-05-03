@@ -1,4 +1,4 @@
-package effect.Services
+package effect.services
 import zio._
 
 class Connection() {
