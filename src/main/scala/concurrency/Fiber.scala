@@ -1,6 +1,8 @@
 package concurrency
 
-import zio._
+import zio.*
+
+import java.io.FileWriter
 
 object Fiber extends ZIOAppDefault {
 
@@ -77,5 +79,38 @@ object Fiber extends ZIOAppDefault {
     fastest <- numComputation.debuggingTask.race(textComputation.debuggingTask)
   } yield fastest
 
-  override def run = fastestComputation
+  /**
+   * Exercises
+   * 1. Zip 2 fibers without using zip combinator
+   * 2. orElse 2 fiber without orElse combinator
+   * 3. distribution a task between many fibers
+   *  spawn n fibers, count the n of words if each file,
+   *  then aggregate all the results in one big number
+   */
+
+  //1.
+  def zipFiber[E,A,B](f1: Fiber[E,A], f2: Fiber[E,B]): ZIO[Any, Nothing, Fiber[E, (A,B)]] = ???
+
+  //2.
+  def orElse[E,A](f1: Fiber[E,A], f2: Fiber[E,A]): ZIO[Any, Nothing, Fiber[E, A]] = ???
+
+  //3.
+  def generateFile(path: String): Unit = {
+    val numberOfWord = 2000
+    val chars = 'a' to 'z'
+    val random = java.util.Random()
+    val fileWords = (0 to random.nextInt(numberOfWord)).map(_ => {
+      (1 to 10).map(_ => chars(random.nextInt(26))).mkString
+    }).mkString(" ")
+
+    val file = new FileWriter(path)
+    file.write(fileWords)
+    file.close()
+  }
+
+  val prepareTestFiles = ZIO.succeed({
+    (1 to 10).map(i => generateFile(s"src/main/resources/test_file_$i.txt"))
+  })
+
+  override def run = ???
 }
