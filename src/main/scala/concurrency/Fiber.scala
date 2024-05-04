@@ -22,7 +22,10 @@ object Fiber extends ZIOAppDefault {
   7. Fiber orElse
   8. Fiber first ready
    */
-  val numComputation = ZIO.succeed(42)
+  val numComputation = ZIO.succeed({
+    Thread.sleep(100)
+    42
+  })
   val textComputation = ZIO.succeed("Some text...")
 
   val oneThreadExecution = for {
@@ -51,5 +54,13 @@ object Fiber extends ZIOAppDefault {
     case Exit.Success(value) => (value._1, value._2)
     case Exit.Failure(cause) => s"exception: ${cause}"
 
-  override def run = multiplyThreadExecutionAwait
+  val multiplyThreadExecutionPolling = for {
+    numFib <- numComputation.debuggingTask.fork
+    textFib <- textComputation.debuggingTask.fork
+    num <- numFib.poll
+    text <- textFib.poll
+    // res <- numFib.zip(textFib).join
+  } yield (num, text)
+
+  override def run = multiplyThreadExecutionPolling
 }
