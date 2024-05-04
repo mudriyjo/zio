@@ -17,9 +17,9 @@ object Fiber extends ZIOAppDefault {
   + 4. Multiply threads execution
   + 5. Fiber Fork/Join
   + 6. Fiber await
-  7. Fiber poll
-  6. Fiber Zip
-  7. Fiber orElse
+  + 7. Fiber poll
+  + 6. Fiber Zip
+  + 7. Fiber orElse
   8. Fiber first ready
    */
   val numComputation = ZIO.succeed({
@@ -62,5 +62,13 @@ object Fiber extends ZIOAppDefault {
     // res <- numFib.zip(textFib).join
   } yield (num, text)
 
-  override def run = multiplyThreadExecutionPolling
+  val defaultParameterExample = {
+    val zio = ZIO.fail("some error happens").orElse(ZIO.succeed("defaultValue"))
+    for {
+      fib <- zio.debuggingTask.fork
+      res <- fib.join
+    } yield res
+  }
+
+  override def run = defaultParameterExample
 }
