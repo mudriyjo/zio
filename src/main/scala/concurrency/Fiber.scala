@@ -20,13 +20,16 @@ object Fiber extends ZIOAppDefault {
   + 7. Fiber poll
   + 6. Fiber Zip
   + 7. Fiber orElse
-  8. Fiber first ready
+  + 8. Fiber first ready
    */
   val numComputation = ZIO.succeed({
     Thread.sleep(100)
     42
   })
-  val textComputation = ZIO.succeed("Some text...")
+  val textComputation = ZIO.succeed({
+    Thread.sleep(200)
+    "Some text..."
+  })
 
   val oneThreadExecution = for {
     num <- numComputation.debuggingTask
@@ -70,5 +73,9 @@ object Fiber extends ZIOAppDefault {
     } yield res
   }
 
-  override def run = defaultParameterExample
+  val fastestComputation = for {
+    fastest <- numComputation.debuggingTask.race(textComputation.debuggingTask)
+  } yield fastest
+
+  override def run = fastestComputation
 }
