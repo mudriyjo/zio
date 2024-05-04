@@ -2,7 +2,7 @@ package concurrency
 
 import zio.*
 
-import java.io.FileWriter
+import java.io.{FileReader, FileWriter}
 
 object Fiber extends ZIOAppDefault {
 
@@ -89,10 +89,35 @@ object Fiber extends ZIOAppDefault {
    */
 
   //1.
-  def zipFiber[E,A,B](f1: Fiber[E,A], f2: Fiber[E,B]): ZIO[Any, Nothing, Fiber[E, (A,B)]] = ???
+  def zipFiber[E,A,B](f1: Fiber[E,A], f2: Fiber[E,B]): ZIO[Any, Nothing, Fiber[E, (A,B)]] =
+    f1.mapFiber(f1res => {
+      f2.map(f2res => (f1res, f2res))
+    })
+
+  val zipFiberTest = for {
+    f1 <- numComputation.fork
+    f2 <- textComputation.fork
+    fib <- zipFiber(f1,f2)
+    res <- fib.join
+    _ <- Console.printLine(res)
+  } yield res
 
   //2.
-  def orElse[E,A](f1: Fiber[E,A], f2: Fiber[E,A]): ZIO[Any, Nothing, Fiber[E, A]] = ???
+  def orElse[E,A](f1: Fiber[E,A], f2: Fiber[E,A]): ZIO[Any, Nothing, Fiber[E, A]] =
+    f1.await.map{
+      case Exit.Failure(cause) => f2
+      case Exit.Success(value) => f1
+    }
+
+  val testOrElse = {
+    for {
+      fib1 <- ZIO.fail("some error happend...").fork
+      fib2 <- ZIO.succeed("Yehuu, it's working...").fork
+      fibRes <- orElse(fib1, fib2)
+      res <- fibRes.join
+      _ <- Console.printLine(res)
+    } yield ()
+  }
 
   //3.
   def generateFile(path: String): Unit = {
@@ -108,9 +133,54 @@ object Fiber extends ZIOAppDefault {
     file.close()
   }
 
+  def calculateNumberOfWordInFile(path: String): Int = {
+    val file = scala.io.Source.fromFile(path)
+    val content = file.getLines()
+    Thread.sleep(1000)
+    content.mkString.split(" ").length
+  }
+
+  def splitTask(xs: List[String]): ZIO[Any, Throwable, Int] =
+//    val first = ZIO.succeed(calculateNumberOfWordInFile(xs.head)).fork
+    ZIO.collectPar(xs)(path => {
+      for {
+        numFib <- ZIO.attemptBlockingIO(calculateNumberOfWordInFile(path)).mapError(_ => None).fork
+        num <- numFib.join
+      } yield num
+    }).map(xs => xs.sum)
+//    val res = xs.tail.foldLeft(first)((acc, el) =>
+//      acc.zipWithPar(ZIO.succeed(calculateNumberOfWordInFile(el)).fork)((a,b) => {
+//        a.zipWith(b)((x,y) => x + y)
+//    }))
+//    ZIO.mergeAllPar(res)(ZIO.succeed(0))((a,b) => {
+//      for {
+//        acc <- a
+//        value <- b.join
+//      } yield acc + value
+//    })
+//    val r = res.tail.foldLeft(res.head)((acc, el) => for {
+//      accFib <- acc
+//      elFib <- el
+//      elVal <- ZIO.succeed(accFib.zipWith(elFib)((a,b) => a + b))
+//    } yield elVal)
+
+
   val prepareTestFiles = ZIO.succeed({
     (1 to 10).map(i => generateFile(s"src/main/resources/test_file_$i.txt"))
   })
 
-  override def run = ???
+  val testSplitTaskParallel = {
+    val files = (1 to 10).map(i => s"src/main/resources/test_file_$i.txt").toList
+    splitTask(files).map(println)
+  }
+
+  val testSplitTaskSeq = {
+    val files = (1 to 10).map(i => s"src/main/resources/test_file_$i.txt").toList
+    val res = files.foldLeft(0)((acc, f) => {
+      println(s"file seq: ${calculateNumberOfWordInFile(f)}")
+      acc + calculateNumberOfWordInFile(f)
+    })
+  }
+
+  override def run = testSplitTaskParallel //*> ZIO.succeed(testSplitTaskSeq)
 }
