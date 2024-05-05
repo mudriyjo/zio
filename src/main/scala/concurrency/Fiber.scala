@@ -141,13 +141,16 @@ object Fiber extends ZIOAppDefault {
   }
 
   def splitTask(xs: List[String]): ZIO[Any, Throwable, Int] =
-//    val first = ZIO.succeed(calculateNumberOfWordInFile(xs.head)).fork
-    ZIO.collectPar(xs)(path => {
-      for {
-        numFib <- ZIO.attemptBlockingIO(calculateNumberOfWordInFile(path)).mapError(_ => None).fork
-        num <- numFib.join
-      } yield num
-    }).map(xs => xs.sum)
+    xs.map(path => {
+      ZIO.succeed(calculateNumberOfWordInFile(path))
+    }).map(_.debuggingTask.fork)
+      .map(x => x.flatMap(_.join))
+      .reduce((zio1, zio2) => {
+        for {
+          x <- zio1
+          y <- zio2
+        } yield x + y
+      })
 //    val res = xs.tail.foldLeft(first)((acc, el) =>
 //      acc.zipWithPar(ZIO.succeed(calculateNumberOfWordInFile(el)).fork)((a,b) => {
 //        a.zipWith(b)((x,y) => x + y)
